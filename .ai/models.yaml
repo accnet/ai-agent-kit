@@ -1,0 +1,4 @@
+planner: codex
+coder: deepseek
+reviewer: claude
+fallback: github-copilot

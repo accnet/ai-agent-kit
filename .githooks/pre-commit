@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# AI-Kit pre-commit hook — enforces Gate G4 (commit hygiene) for every tool/agent.
+# Activate once per clone:  git config core.hooksPath .githooks
+exec .ai/scripts/check-gates.sh staged

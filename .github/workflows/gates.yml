@@ -1,0 +1,34 @@
+name: AI-Kit Gates
+
+# Repo-level enforcement of gates G2/G4 — tool-agnostic:
+# applies no matter which IDE/agent produced the code.
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  g4-commit-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate G4 — no .workspace leaks, no secrets
+        run: bash .ai/scripts/check-gates.sh all
+
+  g2-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate G2 — project tests + lint
+        # Reads test_command / lint_command from .ai/ai.yaml.
+        # Kit-only repos (neither set) pass automatically.
+        run: |
+          for KEY in lint_command test_command; do
+            CMD=$(grep -E "^$KEY:" .ai/ai.yaml | sed "s/^$KEY:[[:space:]]*//" || true)
+            if [ -z "$CMD" ]; then
+              echo "No $KEY in .ai/ai.yaml — skipping."
+              continue
+            fi
+            echo "Running $KEY: $CMD"
+            bash -c "$CMD"
+          done

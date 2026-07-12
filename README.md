@@ -1,71 +1,198 @@
-# AI-Kit Core v0.2.0
+# AI-Kit
 
-Chat-first AI runtime foundation. Drop `.ai/` + `AGENTS.md` into any project to give AI coding agents a consistent process: plan first, minimal context, mandatory review — enforced by gates.
+> **Chat-first AI runtime for coding agents.** Drop `.ai/` + `AGENTS.md` into any repo and every AI coding tool gets a consistent, gated development process — plan first, minimal context, mandatory review.
 
-## Entry Point
+<p align="center">
+  <strong>One instruction file. Ten agent roles. Five enforcement gates. Zero tool lock-in.</strong>
+</p>
 
-`AGENTS.md` is the single canonical instruction file. All tool-specific files are thin pointers to it — edit rules in AGENTS.md only.
+---
 
-## Four-Tier Architecture
+## Why AI-Kit?
 
-| Tier | Role | Committed |
+AI coding agents are powerful but unpredictable. They skip planning, load too much context, and mark things "done" prematurely. AI-Kit gives them a **structured runtime** — not a framework, not a dependency, just a set of conventions and checkpoints that keep agents focused and accountable.
+
+| Problem | AI-Kit Solution |
+|---|---|
+| Agents jump straight to code | **Gate G1** — no implementation before a plan + tasks with acceptance criteria |
+| Agents load the entire codebase | **Minimal context** — load only what the current task needs, rebuild per task |
+| Agents declare "done" too early | **Gate G3** — nothing completes without passing review |
+| Every tool has different config | **Single entry point** — `AGENTS.md` is the canonical instruction file for all tools |
+| Requirements get lost in execution | **Four-tier model** — intent (`features/`) is separate from execution (`.project/`), always regenerable |
+
+---
+
+## Quick Start
+
+```bash
+# 1. Copy the runtime into your project
+cp -r ai-kit/.ai ai-kit/AGENTS.md your-project/
+cp ai-kit/.githooks/pre-commit your-project/.githooks/
+
+# 2. Activate git hooks (once per clone)
+cd your-project
+git config core.hooksPath .githooks
+
+# 3. Configure your stack
+# Edit .ai/ai.yaml → set test_command for your project
+# Add conventions to .ai/knowledge/conventions.md
+
+# 4. Start coding with any AI tool
+# The agent reads AGENTS.md → follows the startup procedure → plans before coding
+```
+
+That's it. No install, no package dependency, no CLI to learn.
+
+---
+
+## Architecture
+
+### Four-Tier Model
+
+```
+┌─ features/<x>/ ──┐   ← WHAT to build (intent)
+│  brief.md         │   Written by: user + Researcher only
+│  research/        │   Committed: yes
+│  context/         │
+└───────────────────┘
+        │
+        │  regenerable — delete .project/, keep features/
+        ▼
+┌─ .project/<x>/ ──┐   ← HOW it gets built (execution)
+│  plan.md          │   Written by: agents
+│  tasks.md         │   Committed: yes
+│  architecture.md  │
+│  progress.md      │
+└───────────────────┘
+        │
+        │  guided by
+        ▼
+┌─ .ai/ ───────────┐   ← durable knowledge & process
+│  agents/ (10)     │   Written by: maintainers
+│  modules/         │   Committed: yes
+│  knowledge/       │
+│  templates/       │
+└───────────────────┘
+        │
+        │  ephemeral scratch
+        ▼
+┌─ .workspace/ ────┐   ← session state
+│  session.md       │   Written by: agents
+│  scratch/         │   Committed: NO (gitignored)
+└───────────────────┘
+```
+
+### Agent Roles
+
+| Agent | Responsibility | Writes To |
 |---|---|---|
-| `.ai/` | durable knowledge & process | yes |
-| `features/` | requirements & research (intent — user + Researcher only) | yes |
-| `.project/` | execution: plan, tasks, architecture, progress | yes |
-| `.workspace/` | ephemeral session state | no |
+| **Researcher** | Gather requirements, research, context | `features/<x>/research/` |
+| **Planner** | Break down work into tasks | `.project/<x>/plan.md`, `tasks.md` |
+| **Architect** | Design system structure | `.project/<x>/architecture.md`, `decisions.md` |
+| **Backend** | Implement server-side code | code, tests, `tasks.md` status |
+| **Frontend** | Implement client-side code | code, tests, `tasks.md` status |
+| **Database** | Schema, migrations, queries | code, tests, `tasks.md` status |
+| **QA** | Write and run tests | tests, defects in `tasks.md` |
+| **Reviewer** | Review code & architecture | verdict in `tasks.md`, `decisions.md` |
+| **Documenter** | Docs, progress, knowledge capture | docs, `progress.md`, `.ai/knowledge/` |
+| **Release** | Changelog, releases, versioning | `CHANGELOG.md`, `.project/INDEX.md` |
 
-Key property: `.project/<x>/` is always **regenerable** from `features/<x>/`. Change stacks, throw away the plan, regenerate — requirements survive.
+### Enforcement Gates
+
+| Gate | When | What It Checks |
+|---|---|---|
+| **G1** | Before any code | `tasks.md` exists with acceptance criteria |
+| **G2** | Per task | Acceptance criteria pass before marking done |
+| **G3** | Before completion | Review verdict must be "approve" |
+| **G4** | Every commit | No `.workspace/` leaks, no secrets, clean state |
+| **G5** | Destructive ops | User approval required (data drops, force-push, production deploys) |
+
+---
 
 ## Tool Compatibility
 
-| Tool | Reads | Mechanism |
+AI-Kit is **tool-agnostic**. Every major AI coding tool reads `AGENTS.md` as its starting instruction:
+
+| Tool | Entry Point | Type |
 |---|---|---|
-| OpenAI Codex | `AGENTS.md` | native |
-| Devin | `AGENTS.md` | native |
-| Cursor | `AGENTS.md` + `.cursor/rules/ai-kit.mdc` | native + always-on rule |
-| GitHub Copilot | `AGENTS.md` + `.github/copilot-instructions.md` | native + repo instructions |
-| Windsurf | `AGENTS.md` + `.windsurf/rules/ai-kit.md` | native + always-on rule |
-| Claude Code | `CLAUDE.md` → AGENTS.md | pointer |
-| Gemini CLI | `GEMINI.md` → AGENTS.md | pointer |
+| OpenAI Codex | `AGENTS.md` | Native |
+| Devin | `AGENTS.md` | Native |
+| GitHub Copilot | `AGENTS.md` + `.github/copilot-instructions.md` | Native + repo instructions |
+| Cursor | `AGENTS.md` + `.cursor/rules/ai-kit.mdc` | Native + always-on rule |
+| Windsurf | `AGENTS.md` + `.windsurf/rules/ai-kit.md` | Native + always-on rule |
+| Claude Code | `CLAUDE.md` → `AGENTS.md` | Pointer file |
+| Gemini CLI | `GEMINI.md` → `AGENTS.md` | Pointer file |
 
-## Structure
+All tool-specific files are **thin pointers** — they contain only "Read AGENTS.md". Never duplicate rules across them.
 
-```
-AGENTS.md          canonical entry point
-.ai/agents/        10 role contracts with write permissions
-.ai/modules/       process standards (planning, context, gates, review, ...)
-.ai/knowledge/     cross-feature memory (decisions, conventions, postmortems)
-.ai/templates/     brief / plan / tasks / progress templates
-features/<x>/      brief.md + research/ + context/   ← intent
-.project/<x>/      plan, tasks, architecture, decisions, progress ← execution
-.project/INDEX.md  feature lifecycle: backlog / active / done / archived
-.workspace/        session state — gitignored, safe to delete
-```
+---
+
+## Repo-Level Automation
+
+These scripts work with **any** IDE or agent because they live in the repo:
+
+| Script | Purpose |
+|---|---|
+| `.ai/scripts/next-task.sh <feature>` | Prints the next claimable task (unchecked, unclaimed, deps resolved) |
+| `.ai/scripts/check-gates.sh staged\|all` | Mechanical Gate G4 check — no workspace leaks, no secrets |
+| `.githooks/pre-commit` | Auto-runs G4 on every commit |
+| `.github/workflows/gates.yml` | CI: G4 on all files + G2 (runs `test_command` from `.ai/ai.yaml`) |
+
+---
 
 ## Stack Conventions
 
-The kit ships no per-stack playbooks. Convention sources, in order: existing project code (canonical) → `.ai/knowledge/conventions.md` (learned, project-specific) → [Agent Skills](https://agentskills.io) installed in the host tool for stack expertise (Stripe, Postgres, framework skills from the ecosystem).
+AI-Kit ships **no per-stack playbooks**. Convention sources, in priority order:
 
-## Repo-Level Automation (tool-agnostic)
+1. **Existing project code** — the canonical source; follow its patterns
+2. **`.ai/knowledge/conventions.md`** — learned, project-specific conventions
+3. **[Agent Skills](https://agentskills.io)** — stack expertise installed in the host tool (Stripe, Postgres, framework skills)
 
-Works for every IDE/agent, because it lives in the repo, not the tool:
+---
 
-- `.ai/scripts/next-task.sh <feature>` — prints claimable tasks (unchecked, unclaimed, dependencies resolved). Any agent's entry point for picking work.
-- `.ai/scripts/check-gates.sh staged|all` — mechanical Gate G4: no `.workspace/` leaks, no secrets.
-- `.githooks/pre-commit` — runs G4 on every commit. Activate once per clone: `git config core.hooksPath .githooks`
-- `.github/workflows/gates.yml` — CI enforcement: G4 on all files + G2 (runs `test_command` from `.ai/ai.yaml`; set it in your host project).
+## Project Structure
 
-Tool-native hooks/subagents/commands are optional accelerators on top — see `.ai/modules/gates.md`.
+```
+AGENTS.md               ← Canonical entry point (every tool starts here)
+CLAUDE.md               ← Pointer → AGENTS.md
+GEMINI.md               ← Pointer → AGENTS.md
+.ai/
+  ai.yaml               ← Project config (test_command, stack, etc.)
+  models.yaml            ← Model preferences
+  rules.yaml             ← Hard rules enforced by gates
+  agents/                ← 10 agent role contracts
+  modules/               ← Process standards (planning, context, gates, review...)
+  knowledge/             ← Cross-feature memory (decisions, conventions, postmortems)
+  templates/             ← Brief, plan, tasks, progress templates
+  commands/              ← Canonical prompts (plan, implement, review, status)
+  scripts/               ← Tool-agnostic automation scripts
+features/<x>/            ← Intent: brief.md + research/ + context/
+.project/<x>/            ← Execution: plan.md, tasks.md, architecture.md...
+.project/INDEX.md        ← Feature lifecycle tracker
+.workspace/              ← Ephemeral session state (gitignored)
+```
 
-## Commands
-
-Canonical prompts in `.ai/commands/` (plan, implement, review, status) — self-contained, tool-agnostic. Shipped projections: `.claude/commands/` (Claude Code `/plan` ...) and `.windsurf/workflows/`. Codex/Gemini: copy per `.ai/commands/README.md`. Other tools: paste the canonical file as the prompt.
+---
 
 ## Rules
 
-1. Planning first — no code before `.project/<x>/tasks.md` with acceptance criteria (G1)
-2. Minimal context — load only what the current task needs
-3. Review required — nothing completes without passing review (G3)
-4. Only user + Researcher write to `features/`; execution artifacts live in `.project/`
-# ai-agent-kit
+1. **Planning first** — no code before `.project/<x>/tasks.md` with acceptance criteria (Gate G1)
+2. **Minimal context** — load only what the current task needs; rebuild context per task
+3. **Review required** — nothing is complete until it passes review (Gate G3)
+4. **Write boundaries** — only user + Researcher write to `features/`; execution artifacts stay in `.project/`
+5. **Regenerability** — `.project/<x>/` is always regenerable from `features/<x>/`; delete it anytime
+
+---
+
+## Roadmap
+
+- **v0.2** ✅ — Gates, four-tier model, multi-agent coordination, tool compatibility
+- **v1.0** 🚧 — Stable release, hardened with real project usage
+
+See [CHANGELOG.md](./CHANGELOG.md) for full history and [ROADMAP.md](./ROADMAP.md) for upcoming plans.
+
+---
+
+<p align="center">
+  <sub>Licensed under MIT. Built for AI coding agents, by developers who use them daily.</sub>
+</p>

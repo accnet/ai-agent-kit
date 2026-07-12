@@ -1,0 +1,12 @@
+---
+description: AI-Kit runtime — canonical rules live in AGENTS.md
+alwaysApply: true
+---
+
+Read `AGENTS.md` at the repo root and follow it exactly. It is the canonical runtime entry point for this project.
+
+Cursor-specific notes only:
+
+- Agent mode: follow the Startup Procedure in AGENTS.md before editing; planning_first means `.project/<feature>/tasks.md` must exist first
+- Select your role contract from `.ai/agents/` based on the task; conventions come from existing code + `.ai/knowledge/conventions.md`
+- Inline edits (Cmd+K) still respect project conventions and the review_required rule
